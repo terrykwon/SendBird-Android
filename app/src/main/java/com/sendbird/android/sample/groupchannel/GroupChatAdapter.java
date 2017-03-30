@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.util.Base64;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -81,6 +82,7 @@ class GroupChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     public void load(String channelUrl) {
+        Log.d("REFRESH_MESSAGE", "load()");
         try {
             File appDir = new File(mContext.getCacheDir(), SendBird.getApplicationId());
             appDir.mkdirs();
@@ -92,6 +94,8 @@ class GroupChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
             mChannel = (GroupChannel) GroupChannel.buildFromSerializedData(Base64.decode(dataArray[0], Base64.DEFAULT | Base64.NO_WRAP));
 
+            // Reset message list, then add cached messages.
+            mMessageList.clear();
             for(int i = 1; i < dataArray.length; i++) {
                 mMessageList.add(BaseMessage.buildFromSerializedData(Base64.decode(dataArray[i], Base64.DEFAULT | Base64.NO_WRAP)));
             }
@@ -470,6 +474,7 @@ class GroupChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         mChannel.getPreviousMessagesByTimestamp(Long.MAX_VALUE, true, limit, true, BaseChannel.MessageTypeFilter.ALL, null, new BaseChannel.GetMessagesHandler() {
            @Override
            public void onResult(List<BaseMessage> list, SendBirdException e) {
+               Log.d("REFRESH_MESSAGE", "getPreviousMessageByTimestamp()");
                if(handler != null) {
                    handler.onResult(list, e);
                }
