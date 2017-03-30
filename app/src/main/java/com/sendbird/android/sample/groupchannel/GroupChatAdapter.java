@@ -82,7 +82,6 @@ class GroupChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     public void load(String channelUrl) {
-        Log.d("REFRESH_MESSAGE", "load()");
         try {
             File appDir = new File(mContext.getCacheDir(), SendBird.getApplicationId());
             appDir.mkdirs();
@@ -474,7 +473,6 @@ class GroupChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         mChannel.getPreviousMessagesByTimestamp(Long.MAX_VALUE, true, limit, true, BaseChannel.MessageTypeFilter.ALL, null, new BaseChannel.GetMessagesHandler() {
            @Override
            public void onResult(List<BaseMessage> list, SendBirdException e) {
-               Log.d("REFRESH_MESSAGE", "getPreviousMessageByTimestamp()");
                if(handler != null) {
                    handler.onResult(list, e);
                }
