@@ -18,14 +18,6 @@ public class PhotoViewerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_photo_viewer);
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
-            // Hide the status bar.
-            View decorView = getWindow().getDecorView();
-            int uiOptions = 0;
-            uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN;
-            decorView.setSystemUiVisibility(uiOptions);
-        }
-
         String url = getIntent().getStringExtra("url");
         String type = getIntent().getStringExtra("type");
 
