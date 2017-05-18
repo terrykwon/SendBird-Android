@@ -74,6 +74,27 @@ public class GroupChatFragment extends Fragment {
         return fragment;
     }
 
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        if (savedInstanceState != null) {
+            // Get channel URL from saved state.
+            mChannelUrl = savedInstanceState.getString(STATE_CHANNEL_URL);
+        } else {
+            // Get channel URL from GroupChannelListFragment.
+            mChannelUrl = getArguments().getString(GroupChannelListFragment.EXTRA_GROUP_CHANNEL_URL);
+        }
+
+        Log.d(LOG_TAG, mChannelUrl);
+
+        mChatAdapter = new GroupChatAdapter(getActivity());
+        setUpChatListAdapter();
+
+        // Load messages from cache.
+        mChatAdapter.load(mChannelUrl);
+    }
+
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -83,7 +104,6 @@ public class GroupChatFragment extends Fragment {
 
         mRootLayout = (RelativeLayout) rootView.findViewById(R.id.layout_group_chat_root);
         mRecyclerView = (RecyclerView) rootView.findViewById(R.id.recycler_group_chat);
-        mChatAdapter = new GroupChatAdapter(getActivity());
 
         mCurrentEventLayout = rootView.findViewById(R.id.layout_group_chat_current_event);
         mCurrentEventText = (TextView) rootView.findViewById(R.id.text_group_chat_current_event);
@@ -137,13 +157,6 @@ public class GroupChatFragment extends Fragment {
         });
 
         setUpRecyclerView();
-        setUpChatListAdapter();
-
-        if (savedInstanceState != null) {
-            mChannelUrl = savedInstanceState.getString(STATE_CHANNEL_URL);
-        } else {
-            mChannelUrl = getArguments().getString(GroupChannelListFragment.EXTRA_GROUP_CHANNEL_URL);
-        }
 
         setHasOptionsMenu(true);
 
@@ -282,15 +295,11 @@ public class GroupChatFragment extends Fragment {
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        mChatAdapter.load(mChannelUrl);
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
+    public void onDestroy() {
+        // Save messages to cache.
         mChatAdapter.save();
+
+        super.onDestroy();
     }
 
     @Override
