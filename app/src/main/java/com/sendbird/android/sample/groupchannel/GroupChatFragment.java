@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -463,9 +464,18 @@ public class GroupChatFragment extends Fragment {
             requestStoragePermissions();
         } else {
             Intent intent = new Intent();
-            // Show only images, no videos or anything else
-            intent.setType("image/* video/*");
+
+            // Pick images or videos
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                intent.setType("*/*");
+                String[] mimeTypes = {"image/*", "video/*"};
+                intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+            } else {
+                intent.setType("image/* video/*");
+            }
+
             intent.setAction(Intent.ACTION_GET_CONTENT);
+
             // Always show the chooser (if there are multiple options available)
             startActivityForResult(Intent.createChooser(intent, "Select Media"), INTENT_REQUEST_CHOOSE_MEDIA);
 
