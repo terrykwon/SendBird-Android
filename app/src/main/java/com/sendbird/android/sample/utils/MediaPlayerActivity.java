@@ -54,6 +54,15 @@ public class MediaPlayerActivity extends Activity implements
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
         setContentView(R.layout.activity_media_player);
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+            // Hide the status bar.
+            View decorView = getWindow().getDecorView();
+            int uiOptions = 0;
+            uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN;
+            decorView.setSystemUiVisibility(uiOptions);
+        }
+
         mPreview = (SurfaceView) findViewById(R.id.surface);
         mProgressBar = (ProgressBar) findViewById(R.id.progress_bar);
         holder = mPreview.getHolder();
