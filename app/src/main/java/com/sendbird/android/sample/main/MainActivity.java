@@ -74,22 +74,11 @@ public class MainActivity extends AppCompatActivity {
                     // Error!
                     e.printStackTrace();
 
-                    // Disconnect even if unregistering push token fails
-                    SendBird.disconnect(new SendBird.DisconnectHandler() {
-                        @Override
-                        public void onDisconnected() {
-                            PreferenceUtils.setConnected(MainActivity.this, false);
-                            Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
-                            startActivity(intent);
-                            finish();
-                        }
-                    });
-
-                    return;
+                    // Don't return because we still need to disconnect.
+                } else {
+                    Toast.makeText(MainActivity.this, "All push tokens unregistered.", Toast.LENGTH_SHORT)
+                            .show();
                 }
-
-                Toast.makeText(MainActivity.this, "All push tokens unregistered.", Toast.LENGTH_SHORT)
-                        .show();
 
                 SendBird.disconnect(new SendBird.DisconnectHandler() {
                     @Override
