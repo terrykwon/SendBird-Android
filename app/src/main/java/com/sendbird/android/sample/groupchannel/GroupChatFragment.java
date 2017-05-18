@@ -600,6 +600,8 @@ public class GroupChatFragment extends Fragment {
     }
 
     private void sendUserMessage(String text) {
+        Log.d(LOG_TAG, "sendUserMessage()");
+
         List<String> urls = WebUtils.extractUrls(text);
         if (urls.size() > 0) {
             sendUserMessageWithUrl(text, urls.get(0));
@@ -609,6 +611,8 @@ public class GroupChatFragment extends Fragment {
         UserMessage tempUserMessage = mChannel.sendUserMessage(text, new BaseChannel.SendUserMessageHandler() {
             @Override
             public void onSent(UserMessage userMessage, SendBirdException e) {
+                Log.d(LOG_TAG, "userMessage onSent()");
+
                 if (e != null) {
                     // Error!
                     Log.e(LOG_TAG, e.toString());

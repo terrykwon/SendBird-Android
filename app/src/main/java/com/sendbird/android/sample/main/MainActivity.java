@@ -73,6 +73,18 @@ public class MainActivity extends AppCompatActivity {
                 if (e != null) {
                     // Error!
                     e.printStackTrace();
+
+                    // Disconnect even if unregistering push token fails
+                    SendBird.disconnect(new SendBird.DisconnectHandler() {
+                        @Override
+                        public void onDisconnected() {
+                            PreferenceUtils.setConnected(MainActivity.this, false);
+                            Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+                            startActivity(intent);
+                            finish();
+                        }
+                    });
+
                     return;
                 }
 
