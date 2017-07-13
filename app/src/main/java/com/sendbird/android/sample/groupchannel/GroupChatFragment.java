@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -19,12 +20,38 @@ import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.*;
-import android.widget.*;
-import com.sendbird.android.*;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.sendbird.android.BaseChannel;
+import com.sendbird.android.BaseMessage;
+import com.sendbird.android.FileMessage;
+import com.sendbird.android.GroupChannel;
+import com.sendbird.android.Member;
+import com.sendbird.android.PreviousMessageListQuery;
+import com.sendbird.android.SendBird;
+import com.sendbird.android.SendBirdException;
+import com.sendbird.android.User;
+import com.sendbird.android.UserMessage;
 import com.sendbird.android.sample.R;
-import com.sendbird.android.sample.main.MainActivity;
-import com.sendbird.android.sample.utils.*;
+import com.sendbird.android.sample.utils.FileUtils;
+import com.sendbird.android.sample.utils.MediaPlayerActivity;
+import com.sendbird.android.sample.utils.PhotoViewerActivity;
+import com.sendbird.android.sample.utils.PreferenceUtils;
+import com.sendbird.android.sample.utils.TextUtils;
+import com.sendbird.android.sample.utils.UrlPreviewInfo;
+import com.sendbird.android.sample.utils.WebUtils;
+
 import org.json.JSONException;
 
 import java.io.File;
@@ -74,6 +101,27 @@ public class GroupChatFragment extends Fragment {
         return fragment;
     }
 
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        if (savedInstanceState != null) {
+            // Get channel URL from saved state.
+            mChannelUrl = savedInstanceState.getString(STATE_CHANNEL_URL);
+        } else {
+            // Get channel URL from GroupChannelListFragment.
+            mChannelUrl = getArguments().getString(GroupChannelListFragment.EXTRA_GROUP_CHANNEL_URL);
+        }
+
+        Log.d(LOG_TAG, mChannelUrl);
+
+        mChatAdapter = new GroupChatAdapter(getActivity());
+        setUpChatListAdapter();
+
+        // Load messages from cache.
+        mChatAdapter.load(mChannelUrl);
+    }
+
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -83,7 +131,6 @@ public class GroupChatFragment extends Fragment {
 
         mRootLayout = (RelativeLayout) rootView.findViewById(R.id.layout_group_chat_root);
         mRecyclerView = (RecyclerView) rootView.findViewById(R.id.recycler_group_chat);
-        mChatAdapter = new GroupChatAdapter(getActivity());
 
         mCurrentEventLayout = rootView.findViewById(R.id.layout_group_chat_current_event);
         mCurrentEventText = (TextView) rootView.findViewById(R.id.text_group_chat_current_event);
@@ -137,18 +184,8 @@ public class GroupChatFragment extends Fragment {
         });
 
         setUpRecyclerView();
-        setUpChatListAdapter();
-
-        if (savedInstanceState != null) {
-            mChannelUrl = savedInstanceState.getString(STATE_CHANNEL_URL);
-        } else {
-            mChannelUrl = getArguments().getString(GroupChannelListFragment.EXTRA_GROUP_CHANNEL_URL);
-        }
 
         setHasOptionsMenu(true);
-
-        // Set action bar title to name of channel
-        updateActionBarTitle();
 
         return rootView;
     }
@@ -201,9 +238,11 @@ public class GroupChatFragment extends Fragment {
     public void onResume() {
         super.onResume();
 
+        mChatAdapter.setContext(getActivity()); // Glide bug fix (java.lang.IllegalArgumentException: You cannot start a load for a destroyed activity)
+
         // Gets channel from URL user requested
 
-        Log.v(LOG_TAG, mChannelUrl);
+        Log.d(LOG_TAG, mChannelUrl);
 
         SendBird.addChannelHandler(CHANNEL_HANDLER_ID, new SendBird.ChannelHandler() {
             @Override
@@ -226,7 +265,7 @@ public class GroupChatFragment extends Fragment {
             @Override
             public void onTypingStatusUpdated(GroupChannel channel) {
                 if (channel.getUrl().equals(mChannelUrl)) {
-                    List<User> typingUsers = channel.getTypingMembers();
+                    List<Member> typingUsers = channel.getTypingMembers();
                     displayTyping(typingUsers);
                 }
             }
@@ -285,15 +324,11 @@ public class GroupChatFragment extends Fragment {
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        mChatAdapter.load(mChannelUrl);
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
+    public void onDestroy() {
+        // Save messages to cache.
         mChatAdapter.save();
+
+        super.onDestroy();
     }
 
     @Override
@@ -440,7 +475,7 @@ public class GroupChatFragment extends Fragment {
      *
      * @param typingUsers The list of currently typing users.
      */
-    private void displayTyping(List<User> typingUsers) {
+    private void displayTyping(List<Member> typingUsers) {
 
         if (typingUsers.size() > 0) {
             mCurrentEventLayout.setVisibility(View.VISIBLE);
@@ -467,9 +502,18 @@ public class GroupChatFragment extends Fragment {
             requestStoragePermissions();
         } else {
             Intent intent = new Intent();
-            // Show only images, no videos or anything else
-            intent.setType("image/* video/*");
+
+            // Pick images or videos
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                intent.setType("*/*");
+                String[] mimeTypes = {"image/*", "video/*"};
+                intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+            } else {
+                intent.setType("image/* video/*");
+            }
+
             intent.setAction(Intent.ACTION_GET_CONTENT);
+
             // Always show the chooser (if there are multiple options available)
             startActivityForResult(Intent.createChooser(intent, "Select Media"), INTENT_REQUEST_CHOOSE_MEDIA);
 
@@ -542,14 +586,16 @@ public class GroupChatFragment extends Fragment {
 
     private void updateActionBarTitle() {
         String title = "";
+
         if(mChannel != null) {
             title = TextUtils.getGroupChannelTitle(mChannel);
         }
 
         // Set action bar title to name of channel
-        ((MainActivity)getActivity()).setActionBarTitle(title);
+        if (getActivity() != null) {
+            ((GroupChannelActivity) getActivity()).setActionBarTitle(title);
+        }
     }
-
 
     private void sendUserMessageWithUrl(final String text, String url) {
         new WebUtils.UrlPreviewAsyncTask() {
